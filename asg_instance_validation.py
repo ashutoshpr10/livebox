@@ -124,30 +124,34 @@ def test_case_a(asg_name):
     # if desired capacity is 0
     if asg_response['AutoScalingGroups'][0]['DesiredCapacity'] == 0:
         print("Test Case A passed, ASG has a desired capacity of 0.")
-    
-    # 1- ASG desired running count should be same as running instances. if mismatch fails
-    if not validate_desired_and_running_instance_count(asg_response):
-        print("Test Case A failed : Desired running count is not matching with running instance count.")
-        sys.exit(0)
-    # 2- if more than 1 instance running on ASG, then ec2 instance should on available and distributed on multiple availibity zone.
-    if not validate_az_distribution(asg_response):
-        print("Test Case A failed : instance are not distributed among avialable az set.")
-        sys.exit(0)
-    #3- SecuirtyGroup, ImageID and VPCID should be same on ASG running instances. Do not just print.
-    if not validate_vpcid_sg_imageid_in_asg(asg_response):
-        print("Test Case A failed : SecuirtyGroup, ImageID and VPCID  are not same for ASG running instances.")
-        sys.exit(0)
-    #4- Findout uptime of ASG running instances and get the longest running instance.
-    get_longest_running_instance_uptime(asg_response)
+    else:
+        # 1- ASG desired running count should be same as running instances. if mismatch fails
+        if not validate_desired_and_running_instance_count(asg_response):
+            print("Test Case A failed : Desired running count is not matching with running instance count.")
+            sys.exit(0)
+        # 2- if more than 1 instance running on ASG, then ec2 instance should on available and distributed on multiple availibity zone.
+        if not validate_az_distribution(asg_response):
+            print("Test Case A failed : instance are not distributed among avialable az set.")
+            sys.exit(0)
+        #3- SecuirtyGroup, ImageID and VPCID should be same on ASG running instances. Do not just print.
+        if not validate_vpcid_sg_imageid_in_asg(asg_response):
+            print("Test Case A failed : SecuirtyGroup, ImageID and VPCID  are not same for ASG running instances.")
+            sys.exit(0)
+        #4- Findout uptime of ASG running instances and get the longest running instance.
+        get_longest_running_instance_uptime(asg_response)
 
 def test_case_b(asg_name):
     asg_response = get_asg_describe(asg_name)
-    
-    # Find the Scheduled actions of as which is going to run next and calcalate elapsed in hh:mm:ss from current time.
-    next_scheduled_action(asg_name)
-    
-    #Calculate total number instances lunched and terminated on current day.
-    launched_and_terminated_today_instance_count(asg_response)
+    if asg_response['AutoScalingGroups'][0]['DesiredCapacity'] == 0:
+        print("Test Case B, ASG has a desired capacity of 0.")
+        print("Next Scheduled Action : None")
+        print("Number of instance launched and terminated today : 0S")
+    else:
+        # Find the Scheduled actions of as which is going to run next and calcalate elapsed in hh:mm:ss from current time.
+        next_scheduled_action(asg_name)
+        
+        #Calculate total number instances lunched and terminated on current day.
+        launched_and_terminated_today_instance_count(asg_response)
 
 def main(argv):
     print(sys.argv)
