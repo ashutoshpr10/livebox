@@ -7,6 +7,7 @@ from dateutil.tz import tzutc
 aws_access_key_id=os.environ['aws_access_key_id']
 aws_secret_access_key=os.environ['aws_secret_access_key']
 
+
 def validate_credentials():
     sts_client = boto3.client('sts',aws_access_key_id=aws_access_key_id,aws_secret_access_key=aws_secret_access_key,region_name='ap-south-1')
     try:
@@ -15,20 +16,27 @@ def validate_credentials():
         print("Invalid Credentials")
         sys.exit(0)
 
+        
 def get_ec2_instance_describe(instance_id):
     ec2_client = boto3.client('ec2',aws_access_key_id=aws_access_key_id,aws_secret_access_key=aws_secret_access_key,region_name='ap-south-1')
     ec2_response = ec2_client.describe_instances(InstanceIds = [instance_id])
     return ec2_response
+    
+    
     
 def get_asg_describe(asg_name):
     asg_client = boto3.client('autoscaling',aws_access_key_id=aws_access_key_id,aws_secret_access_key=aws_secret_access_key,region_name='ap-south-1')
     asg_response = asg_client.describe_auto_scaling_groups(AutoScalingGroupNames=[asg_name])
     return asg_response
 
+
+
 def get_running_instances(asg_response):
     instances = asg_response['AutoScalingGroups'][0]['Instances']
     running_instances = [ instance for instance in instances if instance['LifecycleState'] == 'InService']
     return running_instances
+
+
 
 def get_terminated_instances(asg_response):
     instances = asg_response['AutoScalingGroups'][0]['Instances']
@@ -40,6 +48,8 @@ def validate_desired_and_running_instance_count(asg_response):
     running_instances = get_running_instances(asg_response)
     return len(running_instances) == desired_count
     
+    
+    
 def get_instance_meta_data(instance_id):
     '''
     To get vpc_id, security group and image id
@@ -48,8 +58,9 @@ def get_instance_meta_data(instance_id):
     vpc_id = instance_response['Reservations'][0]['Instances'][0]['VpcId']
     sg = instance_response['Reservations'][0]['Instances'][0]['SecurityGroups']
     image_id = instance_response['Reservations'][0]['Instances'][0]['ImageId']
-    
     return vpc_id, sg, image_id
+
+
 
 def validate_az_distribution(asg_response):
     available_az_set_count = len(asg_response['AutoScalingGroups'][0]['AvailabilityZones'])
@@ -61,6 +72,8 @@ def validate_az_distribution(asg_response):
         return False
     return True  
 
+
+
 def validate_vpcid_sg_imageid_in_asg (asg_response):
     running_instance_id_list = [ instance['InstanceId'] for instance in get_running_instances(asg_response) ]
     first_vpc_id, first_sg, first_image_id =  get_instance_meta_data(instance_id=running_instance_id_list[0])
@@ -71,10 +84,14 @@ def validate_vpcid_sg_imageid_in_asg (asg_response):
             return False  
     return True
 
+
+
 def get_lauchime_for_instance(instance_id):
     instance_response =  get_ec2_instance_describe(instance_id)
     launch_time = instance_response['Reservations'][0]['Instances'][0]['LaunchTime']
     return launch_time
+    
+    
     
 def get_longest_running_instance_uptime(asg_response):
     running_instance_id_list = [ instance['InstanceId'] for instance in get_running_instances(asg_response) ]
@@ -84,6 +101,8 @@ def get_longest_running_instance_uptime(asg_response):
         if uptime > logest_instance_uptime:
             logest_instance_uptime = uptime
     print("Testcase A passed. Longest running instance uptime: {}.".format(logest_instance_uptime))
+    
+    
     
 def next_scheduled_action(asg_name):
     asg_client = boto3.client('autoscaling',aws_access_key_id=aws_access_key_id,aws_secret_access_key=aws_secret_access_key,region_name='ap-south-1')
@@ -108,6 +127,8 @@ def next_scheduled_action(asg_name):
         ss = int((delta_seconds % 60))
         print(f"Next Scheduled Action will run in : {hh:02d}:{mm:02d}:{ss:02d}")
     
+    
+    
 def launched_and_terminated_today_instance_count(asg_response):
     now = datetime.datetime.utcnow().replace(tzinfo=tzutc())
     terminated_instance_id_list =[ instance['InstanceId'] for instance in get_terminated_instances(asg_response)]
@@ -118,6 +139,8 @@ def launched_and_terminated_today_instance_count(asg_response):
             launch_terminated_same_day_count+=1
     print(f"Number of instances launcha and terminated today : {launch_terminated_same_day_count}")
 
+    
+    
 def test_case_a(asg_name):
     asg_response =  get_asg_describe(asg_name)
 
@@ -140,6 +163,8 @@ def test_case_a(asg_name):
         #4- Findout uptime of ASG running instances and get the longest running instance.
         get_longest_running_instance_uptime(asg_response)
 
+        
+        
 def test_case_b(asg_name):
     asg_response = get_asg_describe(asg_name)
     if asg_response['AutoScalingGroups'][0]['DesiredCapacity'] == 0:
@@ -153,6 +178,8 @@ def test_case_b(asg_name):
         #Calculate total number instances lunched and terminated on current day.
         launched_and_terminated_today_instance_count(asg_response)
 
+        
+        
 def main(argv):
     print(sys.argv)
     if len(sys.argv)>1:
@@ -174,5 +201,6 @@ def main(argv):
         print("Please pass correct arguments")
         print("Usage ./sample-test.py asgname")
 
+        
 if __name__ == "__main__":
     main(sys.argv)
